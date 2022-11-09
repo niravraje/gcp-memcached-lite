@@ -1,1 +1,1 @@
-# gcp-memcached-lite
+# memcached-lite
