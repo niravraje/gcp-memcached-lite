@@ -2,6 +2,7 @@ import socket
 import threading
 import json
 import sys
+import os
 import firebase_admin
 from firebase_admin import db
 from google.cloud import storage
@@ -20,26 +21,29 @@ from google.cloud import storage
 # contents = blob.download_as_string()
 # json_contents = json.loads(contents.decode("utf8"))
 
-
+# default values
 IP = "127.0.0.1"
+if len(sys.argv) > 1:
+    IP = sys.argv[1]
 PORT = 7001
 ADDR = (IP, PORT)
 SIZE = 1024
 MESSAGE_FORMAT = "utf-8"
-FILE_NAME = "kv-store.json"
-FB_SERVICE_ACCOUNT_KEY_PATH = "./secrets/nirav-raje-fall2022-firebase-adminsdk-z38v5-a332390c2e.json"
+PWD = os.getcwd()
+FILE_NAME = f"{PWD}/memcached-app/kv-store.json"
+FB_SERVICE_ACCOUNT_KEY_PATH = f"{PWD}/memcached-app/secrets/nirav-raje-fall2022-firebase-adminsdk-z38v5-a332390c2e.json"
 FB_DATABASE_URL = "https://nirav-raje-fall2022-default-rtdb.firebaseio.com/"
-
-
-STORAGE_TYPE = "native" # default
+STORAGE_TYPE = "native"
 
 print(f"len(sys.argv): {len(sys.argv)}")
-if len(sys.argv) > 1:
-    arg1_list = sys.argv[1].split("=")
-    arg1_key = arg1_list[0]
-    arg1_val = arg1_list[-1]
-    if arg1_key == "--storage-backend":
-        STORAGE_TYPE = arg1_val
+
+
+if len(sys.argv) > 2:
+    arg2_list = sys.argv[2].split("=")
+    arg2_key = arg2_list[0]
+    arg2_val = arg2_list[-1]
+    if arg2_key == "--storage-backend":
+        STORAGE_TYPE = arg2_val
 
 print(f"[#] STORAGE_TYPE: {STORAGE_TYPE}")
 
@@ -195,6 +199,7 @@ def native_storage_handler(conn, client_addr):
 
 def main():
     print("[#] Server started...")
+    print("ADDR:", ADDR)
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind(ADDR)
     server.listen()

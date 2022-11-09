@@ -1,7 +1,10 @@
 import socket
 import time
+import sys
 
 IP = "127.0.0.1"
+if len(sys.argv) > 1:
+    IP = sys.argv[1]
 PORT = 7001
 ADDR = (IP, PORT)
 SIZE = 1024
