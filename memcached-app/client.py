@@ -37,10 +37,15 @@ def main():
             continue
 
         if command == "set":
-            key = message_p1.split()[1]
-            val_size = message_p1.split()[2]
+            try:
+                key = message_p1.split()[1]
+                val_size = message_p1.split()[2]
+            except:
+                print(f"[#] Command format is invalid. Please try again.")
+                show_help()
+                continue
             
-            if not val_size.isnumeric():
+            if not val_size or not val_size.isnumeric() or not key:
                 print(f"[#] Command format is invalid. Please try again.")
                 show_help()
                 continue

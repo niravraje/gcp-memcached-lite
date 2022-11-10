@@ -6,6 +6,7 @@ import os
 import firebase_admin
 from firebase_admin import db
 from google.cloud import storage
+import logging
 
 # default values
 IP = "127.0.0.1"
@@ -26,6 +27,7 @@ CS_SERVICE_ACCOUNT_KEY_PATH = f"{PWD}/memcached-app/secrets/nirav-raje-fall2022-
 STORAGE_TYPE = "native"
 
 print(f"len(sys.argv): {len(sys.argv)}")
+logging.info(f"len(sys.argv): {len(sys.argv)}")
 
 
 if len(sys.argv) > 2:
@@ -36,16 +38,19 @@ if len(sys.argv) > 2:
         STORAGE_TYPE = arg2_val
 
 print(f"[#] STORAGE_TYPE: {STORAGE_TYPE}")
+logging.info(f"[#] STORAGE_TYPE: {STORAGE_TYPE}")
 
 
 def cloud_storage_handler(conn, client_addr, blob):
     print(f"[#] Client {client_addr} has connected.")
+    logging.info(f"[#] Client {client_addr} has connected.")
 
     while True:
         message = conn.recv(SIZE).decode(MESSAGE_FORMAT)
         if not message:
             break
         print(f"[#] Command received from client {client_addr}:", "\r\n" + message)
+        logging.info(f"[#] Command received from client {client_addr}: {message}")
         tokens = message.split()
 
         if tokens[0].lower() == "set" and len(tokens) >= 5:
@@ -88,17 +93,20 @@ def cloud_storage_handler(conn, client_addr, blob):
         conn.send(response.encode(MESSAGE_FORMAT))
     
     print(f"[#] Connection to {client_addr} closed.")
+    logging.info(f"[#] Connection to {client_addr} closed.")
     conn.close()
 
 
 def firebase_handler(conn, client_addr, dbref):
     print(f"[#] Client {client_addr} has connected.")
+    logging.info(f"[#] Client {client_addr} has connected.")
 
     while True:
         message = conn.recv(SIZE).decode(MESSAGE_FORMAT)
         if not message:
             break
         print(f"[#] Command received from client {client_addr}:", "\r\n" + message)
+        logging.info(f"[#] Command received from client {client_addr}: {message}")
         tokens = message.split()
 
         if tokens[0].lower() == "set" and len(tokens) >= 5:
@@ -128,17 +136,20 @@ def firebase_handler(conn, client_addr, dbref):
         conn.send(response.encode(MESSAGE_FORMAT))
     
     print(f"[#] Connection to {client_addr} closed.")
+    logging.info(f"[#] Connection to {client_addr} closed.")
     conn.close()
 
 
 def native_storage_handler(conn, client_addr):
     print(f"[#] Client {client_addr} has connected.")
+    logging.info(f"[#] Client {client_addr} has connected.")
 
     while True:
         message = conn.recv(SIZE).decode(MESSAGE_FORMAT)
         if not message:
             break
         print(f"[#] Command received from client {client_addr}:", "\r\n" + message)
+        logging.info(f"[#] Command received from client {client_addr}: {message}")
         tokens = message.split()
 
         if tokens[0].lower() == "set" and len(tokens) >= 5:
@@ -185,18 +196,31 @@ def native_storage_handler(conn, client_addr):
         conn.send(response.encode(MESSAGE_FORMAT))
     
     print(f"[#] Connection to {client_addr} closed.")
+    logging.info(f"[#] Connection to {client_addr} closed.")
     conn.close()
 
 def main():
-    print("[#] Server started...")
-    print("ADDR:", ADDR)
+    # initialize logging configurations
+    logging.basicConfig(
+        filename=f"{PWD}/memcached-app/logs/memcached-server.log", 
+        filemode='w', 
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%d-%b-%y %H:%M:%S',
+        level=logging.DEBUG
+        )
+
+
+    print(f"[#] Server started...")
+    logging.info(f"[#] Server started...")
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind(ADDR)
     server.listen()
     print(f"[#] Server listening for connections at address {IP}:{PORT}")
+    logging.info(f"[#] Server listening for connections at address {IP}:{PORT}")
 
     if STORAGE_TYPE == "firebase":
-        print("[#] Initializing Firebase Realtime Database...")
+        print(f"[#] Initializing Firebase Realtime Database...")
+        logging.info(f"[#] Initializing Firebase Realtime Database...")
         cred_obj = firebase_admin.credentials.Certificate(FB_SERVICE_ACCOUNT_KEY_PATH)
         firebase_admin.initialize_app(cred_obj, {
             'databaseURL':"https://nirav-raje-fall2022-default-rtdb.firebaseio.com/"
@@ -205,6 +229,7 @@ def main():
 
     elif STORAGE_TYPE == "cloud-storage":
         print("[#] Initializing Cloud Storage...")
+        logging.info("[#] Initializing Cloud Storage...")
         # storage_client = storage.Client()
         storage_client = storage.Client.from_service_account_json(json_credentials_path=CS_SERVICE_ACCOUNT_KEY_PATH)
         bucket_name = "memcached-bucket"
@@ -213,13 +238,16 @@ def main():
             # Creates the new bucket
             bucket = storage_client.create_bucket(bucket_name)
             print(f"Bucket {bucket.name} created.")
+            logging.info(f"Bucket {bucket.name} created.")
         else:
             print(f"Bucket {bucket.name} found.")
+            logging.info(f"Bucket {bucket.name} found.")
         blob = bucket.blob(FILE_NAME)
 
     while True:
         conn, client_addr = server.accept()
         print(f"[#] Connected to client {client_addr}")
+        logging.info(f"[#] Connected to client {client_addr}")
 
         if STORAGE_TYPE == "firebase":
             thread = threading.Thread(target=firebase_handler, args=(conn, client_addr, dbref))
@@ -228,7 +256,8 @@ def main():
         else:
             thread = threading.Thread(target=native_storage_handler, args=(conn, client_addr))
         thread.start()
-        print("[#] Number of clients connected: ", threading.active_count() - 1)
+        print(f"[#] Number of clients connected: {threading.active_count() - 1}")
+        logging.info(f"[#] Number of clients connected: {threading.active_count() - 1}")
 
 if __name__ == "__main__":
     main()
