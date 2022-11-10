@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# not in use
+
 sudo apt install python3-pip
 
 pip install -r ./memcached-app/requirements.txt

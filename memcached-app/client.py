@@ -20,6 +20,9 @@ def main():
         message_split = message_p1.split()
         command = message_p1.split()[0].lower()
         
+        if command == "exit":
+            break
+
         if command == "set":
             key = message_p1.split()[1]
             val_size = message_p1.split()[2]

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 source ./config.sh
 
 # Set up application default credentials for client libraries
@@ -21,7 +23,12 @@ gcloud compute instances create ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE} 
 echo "[#] Creating memcached client instance..."
 gcloud compute instances create ${CLIENT_INSTANCE_NAME} --zone=${INSTANCE_ZONE} --machine-type=${CLIENT_MACHINE_TYPE} || true
 
-sleep 2
+sleep 5
+
+gcloud compute instances start ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE}
+gcloud compute instances start ${CLIENT_INSTANCE_NAME} --zone=${INSTANCE_ZONE}
+
+sleep 5
 
 # Retrieve internal IP of server instance
 SERVER_INTERNAL_IP=$(gcloud compute instances describe ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE} --format='get(networkInterfaces[0].networkIP)')
@@ -34,8 +41,35 @@ gcloud compute scp --recurse memcached-app ${SERVER_INSTANCE_NAME}:~ --zone=${IN
 
 # Install server dependencies and launch server
 # gcloud compute ssh ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE} -- "SERVER_INTERNAL_IP=${SERVER_INTERNAL_IP} STORAGE_BACKEND=${STORAGE_BACKEND} /bin/bash memcached-app/init-server.sh"
-gcloud compute ssh ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE} -- "sudo apt install python3-pip && pip install -r ./memcached-app/requirements.txt"
+gcloud compute ssh ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE} -- "sudo apt install python3-pip && pip install -r ./memcached-app/requirements.txt" --quiet
 
-gcloud compute ssh ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE} -- "python3 memcached-app/server.py ${SERVER_INTERNAL_IP} --storage-backend=${STORAGE_BACKEND}"
+# Start key-value store server process on Server VM (in background)
+gcloud compute ssh ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE} -- "python3 memcached-app/server.py ${SERVER_INTERNAL_IP} --storage-backend=${STORAGE_BACKEND}" &
 
+KVSTORE_SERVER_PID=$!
+echo "[#] KVSTORE_SERVER_PID: ${KVSTORE_SERVER_PID}"
 
+sleep 8
+
+# Start key-value store client process on Client VM
+gcloud compute ssh ${CLIENT_INSTANCE_NAME} --zone=${INSTANCE_ZONE} -- "python3 memcached-app/client.py ${SERVER_INTERNAL_IP}"
+
+# [Note] Client process will stop only when the user gives the "exit" command
+
+# Kill the kv-store server process that is still running
+kill ${KVSTORE_SERVER_PID}
+
+# Stop client & server VMs
+gcloud compute instances stop ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE}
+gcloud compute instances stop ${CLIENT_INSTANCE_NAME} --zone=${INSTANCE_ZONE}
+
+# Delete client & server VMs
+gcloud compute instances delete ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE} --delete-disks=all --quiet
+gcloud compute instances delete ${CLIENT_INSTANCE_NAME} --zone=${INSTANCE_ZONE} --delete-disks=all --quiet
+
+# Delete all the created firewall-rules
+gcloud compute firewall-rules delete default-rule-allow-internal --quiet
+gcloud compute firewall-rules delete default-rule-allow-tcp22-tcp3389-icmp --quiet
+
+# Delete the created default network
+gcloud compute networks delete default --quiet

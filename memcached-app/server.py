@@ -30,9 +30,13 @@ ADDR = (IP, PORT)
 SIZE = 1024
 MESSAGE_FORMAT = "utf-8"
 PWD = os.getcwd()
-FILE_NAME = f"{PWD}/memcached-app/kv-store.json"
+FILE_NAME = "kv-store.json"
+
 FB_SERVICE_ACCOUNT_KEY_PATH = f"{PWD}/memcached-app/secrets/nirav-raje-fall2022-firebase-adminsdk-z38v5-a332390c2e.json"
 FB_DATABASE_URL = "https://nirav-raje-fall2022-default-rtdb.firebaseio.com/"
+
+CS_SERVICE_ACCOUNT_KEY_PATH = f"{PWD}/memcached-app/secrets/nirav-raje-fall2022-cloud-storage-84ed9d82b477.json"
+
 STORAGE_TYPE = "native"
 
 print(f"len(sys.argv): {len(sys.argv)}")
@@ -215,7 +219,8 @@ def main():
 
     elif STORAGE_TYPE == "cloud-storage":
         print("[#] Initializing Cloud Storage...")
-        storage_client = storage.Client()
+        # storage_client = storage.Client()
+        storage_client = storage.Client.from_service_account_json(json_credentials_path=CS_SERVICE_ACCOUNT_KEY_PATH)
         bucket_name = "memcached-bucket"
         bucket = storage.Bucket(storage_client, bucket_name)
         if not bucket.exists():
