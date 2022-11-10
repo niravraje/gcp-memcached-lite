@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Storage backend can be any of the following values: "native", "firebase", "cloud-storage"
-STORAGE_BACKEND="firebase"
+STORAGE_BACKEND="native"
 
 INSTANCE_ZONE="europe-west2-a"
 

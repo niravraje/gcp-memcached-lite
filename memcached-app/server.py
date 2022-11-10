@@ -7,20 +7,6 @@ import firebase_admin
 from firebase_admin import db
 from google.cloud import storage
 
-# storage_client = storage.Client()
-# # The name for the new bucket
-# bucket_name = "nirav-bucket"
-# bucket = storage.Bucket(storage_client, bucket_name)
-# if not bucket.exists():
-#     # Creates the new bucket
-#     bucket = storage_client.create_bucket(bucket_name)
-#     print(f"Bucket {bucket.name} created.")
-# blob = bucket.blob("mytest-kv-store.json")
-# blob.upload_from_string(data=json.dumps({"nirav": "raje"}), content_type="application/json")
-# blob.upload_from_string(data=json.dumps({"abc": "def"}), content_type="application/json")
-# contents = blob.download_as_string()
-# json_contents = json.loads(contents.decode("utf8"))
-
 # default values
 IP = "127.0.0.1"
 if len(sys.argv) > 1:

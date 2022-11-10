@@ -41,10 +41,10 @@ gcloud compute scp --recurse memcached-app ${SERVER_INSTANCE_NAME}:~ --zone=${IN
 
 # Install server dependencies and launch server
 # gcloud compute ssh ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE} -- "SERVER_INTERNAL_IP=${SERVER_INTERNAL_IP} STORAGE_BACKEND=${STORAGE_BACKEND} /bin/bash memcached-app/init-server.sh"
-gcloud compute ssh ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE} -- "sudo apt install python3-pip && pip install -r ./memcached-app/requirements.txt" --quiet
+gcloud compute ssh ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE} -- "sudo apt-get -qq install python3-pip && pip install -r ./memcached-app/requirements.txt" --quiet
 
 # Start key-value store server process on Server VM (in background)
-gcloud compute ssh ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE} -- "python3 memcached-app/server.py ${SERVER_INTERNAL_IP} --storage-backend=${STORAGE_BACKEND}" &
+gcloud compute ssh ${SERVER_INSTANCE_NAME} --zone=${INSTANCE_ZONE} -- "python3 memcached-app/server.py ${SERVER_INTERNAL_IP} --storage-backend=${STORAGE_BACKEND} > memcached-app/logs/memcached-server.log" &
 
 KVSTORE_SERVER_PID=$!
 echo "[#] KVSTORE_SERVER_PID: ${KVSTORE_SERVER_PID}"
@@ -55,6 +55,9 @@ sleep 8
 gcloud compute ssh ${CLIENT_INSTANCE_NAME} --zone=${INSTANCE_ZONE} -- "python3 memcached-app/client.py ${SERVER_INTERNAL_IP}"
 
 # [Note] Client process will stop only when the user gives the "exit" command
+
+# Fetch server logs on host machine
+gcloud compute scp --recurse ${SERVER_INSTANCE_NAME}:~/memcached-app/logs/memcached-server.log memcached-app/logs --zone=${INSTANCE_ZONE}
 
 # Kill the kv-store server process that is still running
 kill ${KVSTORE_SERVER_PID}
